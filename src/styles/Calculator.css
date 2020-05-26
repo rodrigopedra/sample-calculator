@@ -1,0 +1,61 @@
+.wrapper {
+    max-width: 300px;
+    margin: 1rem auto;
+}
+
+input.display {
+    display: block;
+    box-sizing: border-box;
+
+    width: 100%;
+
+    padding: 0.2rem 0.5rem;
+    border: solid 1px black;
+
+    color: white;
+    background-color: black;
+
+    font-weight: bold;
+    font-family: monospace;
+    font-size: 1.5rem;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.5;
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+button {
+    flex: 0 0 25%;
+
+    box-sizing: border-box;
+
+    padding: 0.2rem 0.5rem;
+    border: solid 1px black;
+
+    color: black;
+    background-color: lightgray;
+
+    font-weight: bold;
+}
+
+button.wide {
+    flex-grow: 1;
+}
+
+button.operation {
+    color: white;
+    background-color: goldenrod;
+}
+
+button.operation.active {
+    color: goldenrod;
+    background-color: white;
+}
+
+button.digit {
+    color: white;
+    background-color: #555;
+}
