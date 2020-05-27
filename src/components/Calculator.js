@@ -43,15 +43,13 @@ const Dumper = (props) => (
 );
 
 const Calculator = function () {
-    const [current, setCurrent] = useState('0');
+    const [displayValue, setDisplayValue] = useState('0');
+    const [isDirty, setIsDirty] = useState(false);
     const [isPending, setIsPending] = useState(false);
     const [value, setValue] = useState(null);
     const [operator, setOperator] = useState('=');
-    const [lastValue, setLastValue] = useState(0);
-    const [lastOperator, setLastOperator] = useState('=');
-
-    // computed
-    const shouldClear = !['0', '-0'].includes(current);
+    const [previousValue, setPreviousValue] = useState(null);
+    const [previousOperator, setPreviousOperator] = useState('=');
 
     const input = useRef(null);
 
@@ -62,67 +60,79 @@ const Calculator = function () {
     useEffect(focus, []);
 
     const reset = function () {
-        setCurrent('0');
+        setDisplayValue('0');
+        setIsDirty(false);
         setIsPending(false);
 
         setValue(null);
         setOperator('=');
 
-        setLastValue(0);
-        setLastOperator('=');
+        setPreviousValue(null);
+        setPreviousOperator('=');
 
         focus();
     };
 
     const clear = function () {
-        setCurrent('0');
+        setDisplayValue('0');
+        setIsDirty(false);
+
+        if (operator !== '=') {
+            setIsPending(true);
+        }
+
         focus();
     };
 
     const changeSign = function () {
         if (isPending && operator !== '=') {
-            setCurrent('-0');
+            setDisplayValue('-0');
+            setIsDirty(true);
             setIsPending(false);
 
             return focus();
         }
 
-        if (current.startsWith('-')) {
-            setCurrent(current.slice(1));
+        if (displayValue.startsWith('-')) {
+            setDisplayValue(displayValue.slice(1));
         } else {
-            setCurrent('-' + current);
+            setDisplayValue('-' + displayValue);
         }
 
-        if (operator === '=' && !isPending) {
-            setValue(-Number(current));
+        if (!['0', '-0'].includes(displayValue)) {
+            setIsDirty(true);
         }
 
         focus();
     };
 
     const handlePercent = function () {
-        const number = Number(current);
+        const number = Number(displayValue);
 
         if (number === 0.0) {
             return focus();
         }
 
-        const decimalPart = current.replace(/^-?\d*\.?/, '');
+        const decimalPart = displayValue.replace(/^-?\d*\.?/, '');
         const newValue = number / 100.0;
 
-        setCurrent(newValue.toFixed(decimalPart.length + 2));
+        setDisplayValue(newValue.toFixed(decimalPart.length + 2));
+        setIsDirty(true);
+
         focus();
     };
 
     const calculateAgain = function (nextOperator) {
-        if (lastOperator === '=' || nextOperator !== '=') {
+        if (previousOperator === '=' || nextOperator !== '=') {
             return false;
         }
 
-        const newValue = OPERATIONS[lastOperator](Number(current), lastValue);
+        const newValue = OPERATIONS[previousOperator](Number(displayValue), previousValue || 0.0);
 
         setValue(newValue);
-        setCurrent(String(newValue));
+
+        setDisplayValue(String(newValue));
+        setIsDirty(true);
         setIsPending(true);
 
         return true;
@@ -147,7 +157,7 @@ const Calculator = function () {
             return focus();
         }
 
-        const number = Number(current);
+        const number = Number(displayValue);
 
         if (value === null) {
             setValue(number);
@@ -155,39 +165,48 @@ const Calculator = function () {
             const newValue = OPERATIONS[operator](value || 0, number);
 
             setValue(newValue);
-            setLastValue(number);
-            setCurrent(String(newValue));
+            setPreviousValue(number);
+
+            setDisplayValue(String(newValue));
+            setIsDirty(true);
         }
 
         setIsPending(true);
-        setLastOperator(operator);
+        setPreviousOperator(operator);
         setOperator(nextOperator);
         focus();
     };
 
     const handleDigit = function (digit) {
-        if (current === '0' || isPending) {
-            setCurrent(digit);
-        } else if (current === '-0') {
-            setCurrent('-' + digit);
+        if (displayValue === '0') {
+            setDisplayValue(digit);
+        } else if (displayValue === '-0') {
+            setDisplayValue('-' + digit);
+        } else if (isPending) {
+            setDisplayValue(digit);
         } else {
-            setCurrent(current + digit);
+            setDisplayValue(displayValue + digit);
         }
 
+        setIsDirty(true);
         setIsPending(false);
         focus();
     };
 
     const handleDot = function () {
         if (isPending) {
-            setCurrent('0.');
+            setDisplayValue('0.');
+            setIsDirty(true);
+
             setIsPending(false);
 
             return focus();
         }
 
-        if (!/\./.test(current)) {
-            setCurrent(current + '.');
+        if (!/\./.test(displayValue)) {
+            setDisplayValue(displayValue + '.');
+            setIsDirty(true);
+
             setIsPending(false);
         }
 
@@ -195,12 +214,13 @@ const Calculator = function () {
     };
 
     const handleBackspace = function () {
-        const newCurrent = current.slice(0, -1);
+        const newCurrent = displayValue.slice(0, -1);
 
         if (newCurrent === '' || newCurrent === '-') {
-            setCurrent('0');
+            setDisplayValue('0');
         } else {
-            setCurrent(newCurrent);
+            setDisplayValue(newCurrent);
+            setIsDirty(true);
         }
 
         focus();
@@ -226,7 +246,7 @@ const Calculator = function () {
 
         if (key === 'Escape') {
             event.preventDefault();
-            return shouldClear ? clear() : reset();
+            return isDirty ? clear() : reset();
         }
 
         if (key === 'Enter') {
@@ -249,12 +269,12 @@ const Calculator = function () {
         <main className="wrapper">
             <Display
                 ref={input}
-                value={current}
+                value={displayValue}
                 onKeyDown={handleInput}
                 onBlur={focus} />
 
             <section className="buttons">
-                {shouldClear ? (<Button onClick={clear}>C</Button>) : <Button onClick={reset}>AC</Button>}
+                {isDirty ? <Button onClick={clear}>C</Button> : <Button onClick={reset}>AC</Button>}
                 <Button onClick={changeSign}>&#177;</Button>
                 <Button onClick={handlePercent}>%</Button>
                 <OperationButton operator="/" isActive={operator === '/'} calculate={calculate}>
@@ -283,7 +303,7 @@ const Calculator = function () {
                 <OperationButton operator="=" calculate={calculate} />
             </section>
 
-            <Dumper {...{current, isPending, value, operator, lastValue, lastOperator}} />
+            <Dumper {...{displayValue, isDirty, isPending, value, operator, previousValue, previousOperator}} />
         </main>
     );
 };
