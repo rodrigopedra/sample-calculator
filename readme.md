@@ -6,5 +6,6 @@ This is a sample calculator coded in React for self teaching
 $ git clone git@github.com:rodrigopedra/sample-calculator.git
 $ cd sample-calculator
 $ yarn install --frozen-lockfile
-$ yarn hot
+$ yarn prod
+$ yarn start
 ```
